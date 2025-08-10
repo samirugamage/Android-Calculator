@@ -24,24 +24,28 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Grant execute permission for gradlew
+      - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # Helpful diagnostics so we know Gradle sees the Android app
       - name: Show Gradle projects and tasks
         run: |
           ./gradlew -v
           ./gradlew projects
-          ./gradlew tasks --all
+          ./gradlew :app:tasks --all
 
-      # Build the debug APK for the app module explicitly
       - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace
+        run: ./gradlew clean :app:assembleDebug --stacktrace --info
 
-      # Upload any debug APKs found under app/build/outputs
-      - name: Upload artifact
+      - name: List outputs
+        run: |
+          echo "== app/build/outputs =="
+          ls -R app/build/outputs || true
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: CalculatorApp-Debug-APK
-          path: app/build/outputs/**/*.apk
+          path: |
+            app/build/outputs/apk/**/*.apk
+            app/build/outputs/**/*.apk
           if-no-files-found: error
