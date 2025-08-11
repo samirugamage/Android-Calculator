@@ -26,7 +26,7 @@ jobs:
       - name: Install Android SDK packages
         run: |
           sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-          sdkmanager --licenses <<< "y"
+          yes | sdkmanager --licenses
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -36,13 +36,23 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Show Gradle projects and tasks
-        run: |
-          ./gradlew projects
-          ./gradlew :app:tasks --all
+      - name: Show Gradle projects
+        run: ./gradlew projects --no-daemon --console=plain
 
-      - name: Build debug APK
-        run: ./gradlew clean :app:assembleDebug --stacktrace --info --warning-mode all
+      - name: Build debug APK (max logging)
+        run: |
+          ./gradlew clean :app:assembleDebug --no-daemon --stacktrace --debug --warning-mode all --console=plain
+        continue-on-error: true
+
+      - name: Dump common build logs (if any)
+        run: |
+          echo "== manifest-merger report =="
+          cat app/build/outputs/logs/manifest-merger-debug-report.txt 2>/dev/null || true
+          echo "== aapt2 logs =="
+          find app/build -name "*aapt*" -maxdepth 3 -type f -print -exec tail -n +1 {} \; || true
+
+      - name: Re-run build to fail the job if needed
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace --console=plain
 
       - name: List build outputs
         run: |
