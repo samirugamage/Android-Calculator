@@ -1,41 +1,19 @@
-name: Build Android APK
+- uses: gradle/actions/setup-gradle@v4
+  with:
+    validate-wrappers: true
 
-on:
-  push:
-    branches: [ main, dev ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+- name: Make gradlew executable
+  run: chmod +x ./gradlew
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+- name: Show projects
+  run: ./gradlew projects
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
+- name: Build debug APK
+  run: ./gradlew clean :app:assembleDebug --stacktrace --info
 
-      - uses: android-actions/setup-android@v3
-
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: 8.9
-          validate-wrappers: false
-
-      - name: Show projects
-        run: gradle projects
-
-      - name: Build debug APK
-        run: gradle clean :app:assembleDebug --stacktrace --info
-
-      - name: List outputs
-        run: ls -R app/build/outputs || true
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: CalculatorApp-Debug-APK
-          path: app/build/outputs/**/*.apk
-          if-no-files-found: error
+- name: Upload APK
+  uses: actions/upload-artifact@v4
+  with:
+    name: CalculatorApp-Debug-APK
+    path: app/build/outputs/**/*.apk
+    if-no-files-found: error
