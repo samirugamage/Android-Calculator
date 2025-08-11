@@ -3,9 +3,9 @@ package com.example.calculator
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     private lateinit var screen: TextView
     private var current = "0"
     private var pendingOp: Char? = null
@@ -33,15 +33,13 @@ class MainActivity : ComponentActivity() {
             R.id.btnEq  to { equalsPress() },
             R.id.btnC   to { clearAll() },
             R.id.btnDel to { backspace() }
-        ).forEach { (id, action) ->
-            findViewById<Button>(id).setOnClickListener { action() }
-        }
+        ).forEach { (id, action) -> findViewById<Button>(id).setOnClickListener { action() } }
 
         render()
     }
 
     private fun pushDigit(d: String) {
-        if (current == "0" || lastInputWasOp) current = d else current += d
+        current = if (current == "0" || lastInputWasOp) d else current + d
         lastInputWasOp = false
         render()
     }
@@ -97,10 +95,11 @@ class MainActivity : ComponentActivity() {
 
     private fun trim(v: Double): String {
         val s = v.toString()
-        return if (s.contains(".0")) s.trimEnd('0').trimEnd('.') else s
+        return if (s.endsWith(".0")) s.dropLast(2) else s
     }
 
     private fun render() {
         screen.text = current
     }
 }
+
