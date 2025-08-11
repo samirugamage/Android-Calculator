@@ -10,7 +10,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -36,36 +35,29 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Show Gradle projects
-        run: ./gradlew projects --no-daemon --console=plain
+      - name: Show projects
+        run: ./gradlew projects --no-daemon --console=plain | tee projects.log
 
-      - name: Build debug APK (max logging)
-        run: |
-          ./gradlew clean :app:assembleDebug --no-daemon --stacktrace --debug --warning-mode all --console=plain
+      - name: Compile debug sources
+        run: ./gradlew :app:compileDebugKotlin :app:compileDebugJavaWithJavac --no-daemon --stacktrace --console=plain | tee compile.log
         continue-on-error: true
 
-      - name: Dump common build logs (if any)
-        run: |
-          echo "== manifest-merger report =="
-          cat app/build/outputs/logs/manifest-merger-debug-report.txt 2>/dev/null || true
-          echo "== aapt2 logs =="
-          find app/build -name "*aapt*" -maxdepth 3 -type f -print -exec tail -n +1 {} \; || true
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace --console=plain | tee assemble.log
+        continue-on-error: true
 
-      - name: Re-run build to fail the job if needed
-        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace --console=plain
-
-      - name: List build outputs
+      - name: List outputs
         run: |
-          echo "== app/build =="
-          ls -R app/build || true
           echo "== app/build/outputs =="
           ls -R app/build/outputs || true
 
-      - name: Upload APK artifact
+      - name: Upload logs and any APKs
         uses: actions/upload-artifact@v4
         with:
-          name: CalculatorApp-Debug-APK
+          name: build-logs-and-apk
           path: |
-            app/build/outputs/apk/**/*.apk
-            app/build/**/*.apk
-          if-no-files-found: error
+            projects.log
+            compile.log
+            assemble.log
+            app/build/outputs/**/*
+          if-no-files-found: warn
