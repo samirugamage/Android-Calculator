@@ -1,0 +1,63 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          yes | sdkmanager --licenses
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: true
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Show projects
+        run: ./gradlew projects --no-daemon --console=plain | tee projects.log
+
+      - name: Compile debug sources
+        run: ./gradlew :app:compileDebugKotlin :app:compileDebugJavaWithJavac --no-daemon --stacktrace --console=plain | tee compile.log
+        continue-on-error: true
+
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace --console=plain | tee assemble.log
+        continue-on-error: true
+
+      - name: List outputs
+        run: |
+          echo "== app/build/outputs =="
+          ls -R app/build/outputs || true
+
+      - name: Upload logs and any APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs-and-apk
+          path: |
+            projects.log
+            compile.log
+            assemble.log
+            app/build/outputs/**/*
+          if-no-files-found: warn
